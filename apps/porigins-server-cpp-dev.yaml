@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: porigins-server-cpp-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/DistTopic/porigins-server-cpp-infra
+    targetRevision: main
+    path: porigins-server-cpp-dev
+    helm:
+      valueFiles:
+        - values-dev.yaml
+      parameters:
+        - name: image.tag
+          value: dev-latest
+        - name: mysql.auth.rootPassword
+          value: "dev-password"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: porigins-server-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true

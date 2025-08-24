@@ -1,0 +1,174 @@
+# Default values for porigins-server-cpp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/disttopic/porigins-server-cpp
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: LoadBalancer
+  annotations: {}
+  loginPort: 7171
+  gamePort: 7172
+  statusPort: 7171
+  adminPort: 7171
+  # nodePortLogin: 30171
+  # nodePortGame: 30172
+  # nodePortStatus: 30173
+  # nodePortAdmin: 30174
+  # loadBalancerIP: ""
+  # loadBalancerSourceRanges: []
+
+# Server configuration
+server:
+  worldName: "Porigins"
+  worldId: 0
+  serverName: "Porigins Server"
+  motd: "Welcome to Porigins Server!"
+  ownerName: "Administrator"
+  ownerEmail: "admin@porigins.com"
+  url: "https://porigins.com"
+  location: "Global"
+  newPlayerChooseVoc: true
+  spawnPosX: 95
+  spawnPosY: 117
+  spawnPosZ: 7
+  newPlayerTownId: 1
+  
+  # Experience rates
+  rates:
+    experience: 5.0
+    experienceFromPlayers: 0.0
+    skill: 3.0
+    magic: 3.0
+    loot: 2.0
+    spawnMin: 1
+    spawnMax: 1
+  
+  # Pokemon system configuration
+  pokemon:
+    enabled: true
+    captureRate: 50
+    maxTeamSize: 6
+    beltSlots: 6
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# Probes configuration
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+# MySQL configuration
+mysql:
+  enabled: true
+  auth:
+    rootPassword: "forgottenserver"
+    database: "forgottenserver"
+    username: "forgottenserver"
+    password: "forgottenserver"
+  primary:
+    service:
+      ports:
+        mysql: 3306
+    persistence:
+      enabled: true
+      size: 20Gi
+  initdbScripts:
+    schema.sql: |
+      -- Database initialization will be handled by the application
+      CREATE DATABASE IF NOT EXISTS forgottenserver;
+      USE forgottenserver;
+
+# External database configuration (when mysql.enabled is false)
+externalDatabase:
+  host: ""
+  port: 3306
+  database: "forgottenserver"
+  username: "forgottenserver"
+  password: ""

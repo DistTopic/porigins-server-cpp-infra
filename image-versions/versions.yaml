@@ -1,0 +1,16 @@
+# Image versions for different environments
+environments:
+  dev:
+    image:
+      tag: "dev-latest"
+    lastUpdated: "2024-01-01T00:00:00Z"
+    
+  staging:
+    image:
+      tag: "staging-latest"
+    lastUpdated: "2024-01-01T00:00:00Z"
+    
+  prod:
+    image:
+      tag: "stable"
+    lastUpdated: "2024-01-01T00:00:00Z"

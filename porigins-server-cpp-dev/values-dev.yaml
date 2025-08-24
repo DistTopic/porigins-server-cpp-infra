@@ -1,0 +1,50 @@
+# Development environment values for porigins-server-cpp
+porigins-server-cpp:
+  replicaCount: 1
+  
+  image:
+    repository: ghcr.io/disttopic/porigins-server-cpp
+    tag: "dev-latest"
+    pullPolicy: Always
+  
+  service:
+    type: NodePort
+    nodePortLogin: 30171
+    nodePortGame: 30172
+    nodePortStatus: 30173
+    
+  server:
+    worldName: "Porigins Dev"
+    serverName: "Porigins Development Server"
+    motd: "Welcome to Porigins Development Server! Changes may occur frequently."
+    ownerEmail: "dev@porigins.com"
+    
+    # Higher rates for faster testing
+    rates:
+      experience: 100.0
+      skill: 50.0
+      magic: 50.0
+      loot: 10.0
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: false
+    
+  persistence:
+    size: 5Gi
+    
+  mysql:
+    enabled: true
+    auth:
+      rootPassword: "dev-password"
+      password: "dev-password"
+    primary:
+      persistence:
+        size: 10Gi

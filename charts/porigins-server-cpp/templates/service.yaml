@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "porigins-server-cpp.fullname" . }}
+  labels:
+    {{- include "porigins-server-cpp.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- range .Values.service.loadBalancerSourceRanges }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.service.loginPort | default 7171 }}
+      targetPort: login
+      protocol: TCP
+      name: login
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePortLogin }}
+      nodePort: {{ .Values.service.nodePortLogin }}
+      {{- end }}
+    - port: {{ .Values.service.gamePort | default 7172 }}
+      targetPort: game
+      protocol: TCP
+      name: game
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePortGame }}
+      nodePort: {{ .Values.service.nodePortGame }}
+      {{- end }}
+    - port: {{ .Values.service.statusPort | default 7171 }}
+      targetPort: status
+      protocol: TCP
+      name: status
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePortStatus }}
+      nodePort: {{ .Values.service.nodePortStatus }}
+      {{- end }}
+    {{- if .Values.service.adminPort }}
+    - port: {{ .Values.service.adminPort }}
+      targetPort: admin
+      protocol: TCP
+      name: admin
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePortAdmin }}
+      nodePort: {{ .Values.service.nodePortAdmin }}
+      {{- end }}
+    {{- end }}
+  selector:
+    {{- include "porigins-server-cpp.selectorLabels" . | nindent 4 }}

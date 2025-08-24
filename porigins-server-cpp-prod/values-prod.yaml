@@ -1,0 +1,79 @@
+# Production environment values for porigins-server-cpp
+porigins-server-cpp:
+  replicaCount: 2
+  
+  image:
+    repository: ghcr.io/disttopic/porigins-server-cpp
+    tag: "stable"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    
+  server:
+    worldName: "gold"
+    serverName: "Porigins Server"
+    motd: "Welcome to Porigins Server! Enjoy your adventure!"
+    ownerEmail: "admin@porigins.com"
+    url: "https://porigins.com"
+    
+    # Balanced rates for production
+    rates:
+      experience: 1.0
+      skill: 1.0
+      magic: 1.0
+      loot: 1.0
+  
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    
+  persistence:
+    size: 50Gi
+    storageClass: "gp3"
+    
+  mysql:
+    enabled: true
+    auth:
+      # Production passwords should be set via sealed secrets or external secrets
+      rootPassword: "CHANGE_ME_IN_SEALED_SECRETS"
+      password: "CHANGE_ME_IN_SEALED_SECRETS"
+    primary:
+      persistence:
+        enabled: true
+        size: 100Gi
+        storageClass: "gp3"
+    metrics:
+      enabled: true
+      
+  # Production-specific node selection
+  nodeSelector:
+    node-type: "game-server"
+    
+  # Ensure pods are spread across different nodes
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+              - porigins-server-cpp
+          topologyKey: kubernetes.io/hostname

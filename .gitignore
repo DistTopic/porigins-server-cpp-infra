@@ -1,0 +1,31 @@
+# Helm dependencies
+charts/*/charts/
+charts/*/Chart.lock
+
+# Helm package files
+*.tgz
+
+# Values files with secrets
+values-secrets.yaml
+*-secrets.yaml
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Kubernetes secrets (if accidentally committed)
+secrets/

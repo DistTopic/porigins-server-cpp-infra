@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "porigins-server-cpp.fullname" . }}-config
+  labels:
+    {{- include "porigins-server-cpp.labels" . | nindent 4 }}
+data:
+  config.lua: |
+    -- Database configuration
+    mysqlHost = "{{ include "porigins-server-cpp.mysqlHost" . }}"
+    mysqlUser = "{{ include "porigins-server-cpp.mysqlUser" . }}"
+    mysqlPass = "$(MYSQL_PASSWORD)"
+    mysqlDatabase = "{{ include "porigins-server-cpp.mysqlDatabase" . }}"
+    mysqlPort = {{ include "porigins-server-cpp.mysqlPort" . }}
+    mysqlSock = ""
+
+    -- World configuration
+    worldName = "{{ .Values.server.worldName | default "Porigins" }}"
+    worldId = {{ .Values.server.worldId | default 0 }}
+    
+    -- Server configuration
+    ip = "0.0.0.0"
+    loginPort = {{ .Values.service.loginPort | default 7171 }}
+    gamePort = {{ .Values.service.gamePort | default 7172 }}
+    statusPort = {{ .Values.service.statusPort | default 7171 }}
+    
+    -- Admin configuration
+    adminPort = {{ .Values.service.adminPort | default 7171 }}
+    
+    -- Login configuration
+    accountManager = false
+    namelockManager = true
+    newPlayerChooseVoc = {{ .Values.server.newPlayerChooseVoc | default "true" }}
+    newPlayerSpawnPosX = {{ .Values.server.spawnPosX | default 95 }}
+    newPlayerSpawnPosY = {{ .Values.server.spawnPosY | default 117 }}
+    newPlayerSpawnPosZ = {{ .Values.server.spawnPosZ | default 7 }}
+    newPlayerTownId = {{ .Values.server.newPlayerTownId | default 1 }}
+    
+    -- Server save configuration
+    serverSaveNotifyMessage = true
+    serverSaveNotifyDuration = 5
+    serverSaveCleanMap = false
+    serverSaveClose = false
+    serverSaveShutdown = true
+    
+    -- Houses configuration
+    houseRentPeriod = "never"
+    housePriceRentMultiplier = 1.0
+    housePriceEachSQM = 1000
+    houseRentAsPrice = false
+    houseBuyLevel = 1
+    houseReqAccountTime = 0
+    
+    -- Items configuration
+    timeBetweenActions = 200
+    timeBetweenExActions = 1000
+    hotkeyAimbotEnabled = true
+    
+    -- Map configuration
+    mapName = "forgotten"
+    mapAuthor = "Komic"
+    
+    -- Market configuration
+    marketEnabled = true
+    marketOfferDuration = 30 * 24 * 60 * 60
+    premiumToCreateMarketOffer = true
+    checkExpiredMarketOffersEachMinutes = 60
+    maxMarketOffersAtATimePerPlayer = 100
+    
+    -- MySQL configuration
+    mysqlReadTimeout = 10
+    mysqlWriteTimeout = 10
+    encryptionType = "sha1"
+    
+    -- Misc configuration
+    allowClones = false
+    serverName = "{{ .Values.server.serverName | default "Porigins Server" }}"
+    serverMotd = "{{ .Values.server.motd | default "Welcome to Porigins Server!" }}"
+    ownerName = "{{ .Values.server.ownerName | default "Administrator" }}"
+    ownerEmail = "{{ .Values.server.ownerEmail | default "admin@porigins.com" }}"
+    url = "{{ .Values.server.url | default "https://porigins.com" }}"
+    location = "{{ .Values.server.location | default "Global" }}"
+    
+    -- Experience configuration
+    experienceStages = "no"
+    rateExperience = {{ .Values.server.rates.experience | default 5.0 }}
+    rateExperienceFromPlayers = {{ .Values.server.rates.experienceFromPlayers | default 0.0 }}
+    rateSkill = {{ .Values.server.rates.skill | default 3.0 }}
+    rateMagic = {{ .Values.server.rates.magic | default 3.0 }}
+    rateLoot = {{ .Values.server.rates.loot | default 2.0 }}
+    rateSpawnMin = {{ .Values.server.rates.spawnMin | default 1 }}
+    rateSpawnMax = {{ .Values.server.rates.spawnMax | default 1 }}
+    
+    -- Pokemon System
+    pokemonSystemEnabled = {{ .Values.server.pokemon.enabled | default "true" }}
+    pokemonCaptureRate = {{ .Values.server.pokemon.captureRate | default 50 }}
+    pokemonMaxTeamSize = {{ .Values.server.pokemon.maxTeamSize | default 6 }}
+    
+    -- Pokeball Belt System
+    pokeballBeltSlots = {{ .Values.server.pokemon.beltSlots | default 6 }}

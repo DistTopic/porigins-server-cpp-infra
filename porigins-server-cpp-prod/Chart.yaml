@@ -1,0 +1,10 @@
+apiVersion: v2
+name: porigins-server-cpp-prod
+description: Production environment for Porigins Server C++
+type: application
+version: 0.1.0
+appVersion: "stable"
+dependencies:
+  - name: porigins-server-cpp
+    version: "0.1.0"
+    repository: "file://../charts/porigins-server-cpp"

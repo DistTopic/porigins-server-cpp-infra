@@ -1,0 +1,19 @@
+apiVersion: v2
+name: porigins-server-cpp
+description: A Helm chart for Porigins Server C++ - ForgottenServer with Pokemon modifications
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - otserver
+  - forgottenserver
+  - pokemon
+  - gaming
+  - cpp
+maintainers:
+  - name: DistTopic
+dependencies:
+  - name: mysql
+    version: "9.4.6"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: mysql.enabled
