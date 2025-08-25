@@ -6,7 +6,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: porigins
   source:
     repoURL: https://github.com/DistTopic/porigins-server-cpp-infra
     targetRevision: main
@@ -19,7 +19,7 @@ spec:
           value: latest
   destination:
     server: https://kubernetes.default.svc
-    namespace: porigins-server
+    namespace: porigins
   syncPolicy:
     automated:
       prune: true

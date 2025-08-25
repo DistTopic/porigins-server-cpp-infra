@@ -21,7 +21,7 @@ spec:
           value: "dev-password"
   destination:
     server: https://kubernetes.default.svc
-    namespace: porigins-dev
+    namespace: porigins
   syncPolicy:
     automated:
       prune: true
