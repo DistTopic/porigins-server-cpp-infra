@@ -40,6 +40,34 @@ This repository follows the GitOps pattern where:
 - Load balancer service
 - ArgoCD automated sync
 
+## 🔄 CI/CD Integration
+
+This repository integrates with the main server repository through:
+
+1. **Automated Image Updates**: CI/CD pipeline updates `image-version.yaml` with new image tags
+2. **GitOps Workflow**: ArgoCD automatically deploys changes when this repository is updated
+3. **Multi-Environment**: Separate configurations for dev and production
+
+### Image Version Updates
+
+The `image-version.yaml` file is automatically updated by the CI/CD pipeline:
+
+```yaml
+image:
+  tag: "abc123def456"
+  sha: "abc123def456"
+  updated: "2025-06-20T10:30:00Z"
+  commit_url: "https://github.com/DistTopic/porigins-server-cpp/commit/abc123def456"
+  build_number: "42"
+```
+
+### Docker Image Tags
+
+The CI/CD pipeline follows the same naming convention as the reference repositories:
+- `latest` - Latest build from main branch
+- `<sha>` - Specific commit SHA
+- `main-<sha>` - Branch-specific tags
+
 ## Deployment
 
 The infrastructure is automatically deployed using ArgoCD. Changes to this repository trigger automatic deployments to the respective environments.

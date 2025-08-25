@@ -1,75 +1,241 @@
-name: Build and Push Docker Image
+name: 🚀 CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types: [published]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: disttopic/porigins-server-cpp
+  INFRA_REPO: DistTopic/porigins-server-cpp-infra
 
 jobs:
-  build:
+  # Build and Test Job
+  build-and-test:
+    name: 🛠️ Build and Test
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Docker buildx
-      uses: docker/setup-buildx-action@v3
+      - name: 🔧 Setup build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+          echo "✅ Build dependencies installed"
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 📦 Configure vcpkg
+        run: |
+          if [ -d "vcpkg" ]; then
+            echo "📁 Using existing vcpkg directory"
+            cd vcpkg
+            git pull
+          else
+            echo "📦 Cloning vcpkg"
+            git clone https://github.com/Microsoft/vcpkg.git
+            cd vcpkg
+          fi
+          ./bootstrap-vcpkg.sh
+          echo "✅ vcpkg configured"
+        
+      - name: 🔨 Build Project
+        id: build
+        run: |
+          echo "🔨 Starting C++ build process..."
+          if [ -f "CMakeLists.txt" ]; then
+            mkdir -p build
+            cd build
+            cmake ..
+            cmake --build . --config Release
+            echo "✅ CMake build completed"
+          else
+            echo "ℹ️ No CMakeLists.txt found, Docker build will handle compilation"
+          fi
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=semver,pattern={{major}}
-          type=raw,value=latest,enable={{is_default_branch}}
-          type=raw,value=stable,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-          type=raw,value=dev-latest,enable=${{ github.ref == 'refs/heads/main' }}
+  # Package and Push Job - runs after build-and-test
+  package-and-push:
+    name: 📦 Package and Push
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: 🔧 Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Update GitOps repository
-      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-      uses: peter-evans/repository-dispatch@v3
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: DistTopic/porigins-server-cpp-infra
-        event-type: image-update
-        client-payload: |
-          {
-            "image": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}",
-            "tag": "${{ steps.meta.outputs.version }}",
-            "sha": "${{ github.sha }}",
-            "ref": "${{ github.ref }}",
-            "repository": "${{ github.repository }}"
-          }
+      - name: 🔐 Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📋 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.sha }}
+
+      - name: 🔨 Build and push Docker image
+        id: docker-build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 📝 Image Build Summary
+        run: |
+          echo "## 🐳 Docker Image Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: \`${{ env.REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: \`${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # GitOps Update Job - runs after package-and-push, only on main branch
+  gitops-update:
+    name: 🔄 GitOps Update
+    runs-on: ubuntu-latest
+    needs: package-and-push
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    steps:
+      - name: 📝 Update image-version.yaml in infra repo
+        id: update-version
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.INFRA_REPO_TOKEN }}
+          script: |
+            const imageTag = '${{ github.sha }}';
+            const timestamp = new Date().toISOString();
+            const commitUrl = 'https://github.com/${{ github.repository }}/commit/${{ github.sha }}';
+            const buildNumber = '${{ github.run_number }}';
+            
+            console.log('🎯 Updating image-version.yaml with tag:', imageTag);
+            
+            const { data: fileData } = await github.rest.repos.getContent({
+              owner: 'DistTopic',
+              repo: 'porigins-server-cpp-infra',
+              path: 'image-version.yaml',
+            });
+            
+            const content = [
+              '# This file is automatically updated by CI/CD',
+              '# Do not modify manually',
+              'image:',
+              '  tag: "' + imageTag + '"',
+              '  sha: "' + imageTag + '"',
+              '  updated: "' + timestamp + '"',
+              '  commit_url: "' + commitUrl + '"',
+              '  build_number: "' + buildNumber + '"'
+            ].join('\n');
+            
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: 'DistTopic',
+              repo: 'porigins-server-cpp-infra',
+              path: 'image-version.yaml',
+              message: '🔄 Update image tag to ' + imageTag,
+              content: Buffer.from(content).toString('base64'),
+              sha: fileData.sha,
+            });
+            
+            console.log('✅ Successfully updated image-version.yaml');
+
+      - name: ⚡ Update Helm values.yaml in infra repo
+        id: update-helm
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.INFRA_REPO_TOKEN }}
+          script: |
+            const imageTag = '${{ github.sha }}';
+            
+            console.log('⚡ Updating Helm values.yaml with tag:', imageTag);
+            
+            const { data: fileData } = await github.rest.repos.getContent({
+              owner: 'DistTopic',
+              repo: 'porigins-server-cpp-infra',
+              path: 'charts/porigins-server-cpp/values.yaml',
+            });
+            
+            let content = Buffer.from(fileData.content, 'base64').toString();
+            content = content.replace(
+              /tag:\s*"[^"]*"/,
+              'tag: "' + imageTag + '"'
+            );
+            
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: 'DistTopic',
+              repo: 'porigins-server-cpp-infra',
+              path: 'charts/porigins-server-cpp/values.yaml',
+              message: '⚡ Update Helm chart image tag to ' + imageTag,
+              content: Buffer.from(content).toString('base64'),
+              sha: fileData.sha,
+            });
+            
+            console.log('✅ Successfully updated Helm values.yaml');
+
+  # Deployment Summary - runs after gitops-update, only on main branch
+  deployment-summary:
+    name: 📊 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: gitops-update
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: 🎉 Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Container Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: \`${{ env.REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Full Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Number**: \`${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: \`$(date -u)\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 GitOps Updates" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Updated \`image-version.yaml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Updated \`charts/porigins-server-cpp/values.yaml\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐳 [Container Registry](https://github.com/orgs/DistTopic/packages/container/package/porigins-server-cpp)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏗️ [Infrastructure Repo](https://github.com/DistTopic/porigins-server-cpp-infra)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 [This Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏭️ Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. 🔍 ArgoCD will detect changes in infrastructure repository" >> $GITHUB_STEP_SUMMARY
+          echo "2. 🚀 Game server will be automatically deployed to cluster" >> $GITHUB_STEP_SUMMARY
+          echo "3. 📊 Monitor deployment status in ArgoCD dashboard" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🎊 Deployment notification
+        run: |
+          echo "✅ Successfully completed CI/CD pipeline!"
+          echo "📦 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "🏗️ Infrastructure updated at: https://github.com/DistTopic/porigins-server-cpp-infra"
+          echo "⏰ Timestamp: $(date -u)"

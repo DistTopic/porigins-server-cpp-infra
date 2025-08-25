@@ -1,0 +1,8 @@
+# This file is automatically updated by CI/CD
+# Do not modify manually
+image:
+  tag: "latest"
+  sha: "latest"
+  updated: "2024-12-19T10:00:00Z"
+  commit_url: "https://github.com/DistTopic/porigins-server-cpp/commit/latest"
+  build_number: "1"
