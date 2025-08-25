@@ -1,0 +1,27 @@
+{{- if .Values.traefik.tcp.enabled -}}
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "porigins-server-cpp.fullname" . }}-tcp
+  labels:
+    {{- include "porigins-server-cpp.labels" . | nindent 4 }}
+  {{- with .Values.traefik.tcp.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+    - {{ .Values.traefik.tcp.entryPoint }}
+  routes:
+  - match: HostSNI(`{{ .Values.traefik.tcp.host }}`) || HostSNI(`*`)
+    services:
+    - name: {{ include "porigins-server-cpp.fullname" . }}
+      port: {{ .Values.service.loginPort }}
+  {{- if .Values.traefik.tcp.tls.enabled }}
+  tls:
+    passthrough: {{ .Values.traefik.tcp.tls.passthrough }}
+    {{- if .Values.traefik.tcp.tls.secretName }}
+    secretName: {{ .Values.traefik.tcp.tls.secretName }}
+    {{- end }}
+  {{- end }}
+{{- end }}

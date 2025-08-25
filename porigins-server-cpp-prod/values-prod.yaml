@@ -13,9 +13,9 @@ porigins-server-cpp:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
       service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
   
-  # Ingress configuration for Traefik
+  # Ingress configuration for Traefik (desabilitado - usando TCP)
   ingress:
-    enabled: true
+    enabled: false
     className: "traefik"
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
@@ -30,6 +30,17 @@ porigins-server-cpp:
       - secretName: game-porigins-org-tls
         hosts:
           - game.porigins.org
+  
+  # Traefik TCP configuration para porta 7171
+  traefik:
+    tcp:
+      enabled: true
+      host: "porigins.org"
+      entryPoint: "tibia"
+      annotations: {}
+      tls:
+        enabled: false
+        passthrough: true
     
   server:
     worldName: "gold"

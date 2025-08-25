@@ -37,7 +37,7 @@ spec:
               service:
                 name: {{ include "porigins-server-cpp.fullname" $ }}
                 port:
-                  number: {{ $.Values.service.port }}
+                  number: {{ .port | default $.Values.service.loginPort }}
           {{- end }}
     {{- end }}
 {{- end }}

@@ -172,3 +172,36 @@ externalDatabase:
   database: "forgottenserver"
   username: "forgottenserver"
   password: ""
+
+# Ingress configuration for Traefik
+ingress:
+  enabled: false  # Desabilitado - usaremos TCP route
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    traefik.ingress.kubernetes.io/service.serversscheme: "tcp"
+    # Para suportar TCP (porta 7171) via Traefik
+    traefik.ingress.kubernetes.io/router.rule: "Host(`porigins.org`)"
+  hosts:
+    - host: porigins.org
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 7171
+  tls: []
+  # Opcional: habilitar HTTPS com certificado automático
+  #  - secretName: porigins-tls
+  #    hosts:
+  #      - porigins.org
+
+# Traefik TCP configuration (para jogos que usam TCP)
+traefik:
+  tcp:
+    enabled: true
+    host: "porigins.org"
+    entryPoint: "tibia"  # Você precisa configurar este entrypoint no Traefik
+    annotations: {}
+    tls:
+      enabled: false
+      passthrough: true
+      secretName: ""
