@@ -1,0 +1,89 @@
+name: GitOps - Image Version Update
+
+on:
+  push:
+    paths:
+      - 'image-versions/versions.yaml'
+      - 'porigins-server-cpp-dev/values-dev.yaml'
+      - 'porigins-server-cpp-prod/values-prod.yaml'
+    branches: [ main, develop ]
+
+jobs:
+  validate-and-notify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+      with:
+        version: '3.14.0'
+        
+    - name: Validate Helm charts
+      run: |
+        if [ "${{ github.ref_name }}" == "develop" ]; then
+          helm lint porigins-server-cpp-dev
+          helm template porigins-server-cpp-dev porigins-server-cpp-dev --values porigins-server-cpp-dev/values-dev.yaml --debug
+        else
+          helm lint porigins-server-cpp-prod
+          helm template porigins-server-cpp-prod porigins-server-cpp-prod --values porigins-server-cpp-prod/values-prod.yaml --debug
+        fi
+        
+    - name: Extract image version
+      id: image-version
+      run: |
+        if [ "${{ github.ref_name }}" == "develop" ]; then
+          IMAGE_TAG=$(yq eval '.dev.tag' image-versions/versions.yaml)
+          IMAGE_SHA=$(yq eval '.dev.sha // "latest"' image-versions/versions.yaml)
+          ENVIRONMENT="Development"
+        else
+          IMAGE_TAG=$(yq eval '.prod.tag' image-versions/versions.yaml)
+          IMAGE_SHA=$(yq eval '.prod.sha // "stable"' image-versions/versions.yaml)
+          ENVIRONMENT="Production"
+        fi
+        echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "sha=$IMAGE_SHA" >> $GITHUB_OUTPUT
+        echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        
+    - name: Check database configuration
+      run: |
+        if [ "${{ github.ref_name }}" == "main" ]; then
+          # Production - verify external database is configured
+          EXTERNAL_DB=$(yq eval '.porigins-server-cpp.externalDatabase.enabled' porigins-server-cpp-prod/values-prod.yaml)
+          MYSQL_ENABLED=$(yq eval '.porigins-server-cpp.mysql.enabled' porigins-server-cpp-prod/values-prod.yaml)
+          
+          if [ "$EXTERNAL_DB" != "true" ] || [ "$MYSQL_ENABLED" != "false" ]; then
+            echo "❌ Production must use external database"
+            exit 1
+          fi
+          echo "✅ External database configuration verified"
+        fi
+        
+    - name: Create deployment summary
+      run: |
+        echo "🚀 New deployment ready for ${{ steps.image-version.outputs.environment }}!"
+        echo "- Image Tag: ${{ steps.image-version.outputs.tag }}"
+        echo "- Image SHA: ${{ steps.image-version.outputs.sha }}"
+        echo "- Environment: ${{ steps.image-version.outputs.environment }}"
+        echo ""
+        echo "ArgoCD will automatically deploy this to the cluster."
+        
+    - name: Validate database schema (if schema files exist)
+      run: |
+        if [ -f "schema/schema.sql" ]; then
+          echo "📊 Database schema file found, running validation..."
+          # Basic SQL syntax check
+          if grep -q "CREATE TABLE" schema/schema.sql; then
+            echo "✅ Schema contains table definitions"
+          else
+            echo "⚠️  Schema file exists but no CREATE TABLE statements found"
+          fi
+        else
+          echo "ℹ️  No schema file found in schema/ directory"
+        fi

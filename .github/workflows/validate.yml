@@ -1,0 +1,56 @@
+name: Validate Helm Charts
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+      with:
+        version: '3.14.0'
+
+    - name: Validate Helm charts
+      run: |
+        # Lint and template dev chart
+        helm lint porigins-server-cpp-dev
+        helm template porigins-server-cpp-dev porigins-server-cpp-dev --values porigins-server-cpp-dev/values-dev.yaml
+        
+        # Lint and template prod chart  
+        helm lint porigins-server-cpp-prod
+        helm template porigins-server-cpp-prod porigins-server-cpp-prod --values porigins-server-cpp-prod/values-prod.yaml
+
+    - name: Validate ArgoCD Applications
+      run: |
+        # Check if ArgoCD application files are valid YAML
+        for app in apps/*.yaml; do
+          echo "Validating $app"
+          if ! yq eval . "$app" > /dev/null 2>&1; then
+            echo "❌ Invalid YAML in $app"
+            exit 1
+          else
+            echo "✅ Valid YAML: $app"
+          fi
+        done
+
+    - name: Check Helm chart dependencies
+      run: |
+        # Verify chart dependencies exist
+        helm dependency list charts/porigins-server-cpp || true
+        
+        # Check if all referenced templates exist
+        if ! helm template test-release charts/porigins-server-cpp --values porigins-server-cpp-prod/values-prod.yaml > /dev/null; then
+          echo "❌ Helm template validation failed"
+          exit 1
+        else
+          echo "✅ Helm templates are valid"
+        fi

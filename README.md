@@ -1,8 +1,16 @@
-# Porigins Server C++ Infrastructure
+# Porigins Server C++ - Infrastructure
 
-This repository contains the Kubernetes infrastructure configurations for the Porigins Server C++ application.
+GitOps infrastructure repository for Porigins Server C++ deployment using Kubernetes, Helm, and ArgoCD.
 
-## GitOps Pattern
+## 🏗️ Architecture
+
+This repository contains the complete infrastructure-as-code for deploying the Porigins Server C++ game server:
+
+- **Helm Charts**: Production-ready Kubernetes manifests
+- **ArgoCD Applications**: GitOps deployment automation  
+- **Multi-Environment**: Separate dev and production configurations
+- **External Database**: Integration with existing MySQL cluster
+- **Ingress & TLS**: Traefik integration with automatic certificates
 
 This repository follows the GitOps pattern where:
 - **porigins-server-cpp**: Contains the application source code and Dockerfile
