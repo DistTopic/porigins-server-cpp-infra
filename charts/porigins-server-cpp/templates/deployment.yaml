@@ -59,16 +59,43 @@ spec:
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
+                  {{- if .Values.externalDatabase.existingSecret }}
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: {{ .Values.externalDatabase.passwordKey | default "mysql-password" }}
+                  {{- else }}
                   name: {{ include "porigins-server-cpp.fullname" . }}-secret
                   key: mysql-password
+                  {{- end }}
             - name: MYSQL_HOST
+              {{- if .Values.externalDatabase.existingSecret }}
+              value: "{{ .Values.externalDatabase.host }}"
+              {{- else }}
               value: "{{ include "porigins-server-cpp.mysqlHost" . }}"
+              {{- end }}
             - name: MYSQL_PORT
+              {{- if .Values.externalDatabase.existingSecret }}
+              value: "{{ .Values.externalDatabase.port }}"
+              {{- else }}
               value: "{{ include "porigins-server-cpp.mysqlPort" . }}"
+              {{- end }}
             - name: MYSQL_DATABASE
+              {{- if .Values.externalDatabase.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: {{ .Values.externalDatabase.databaseKey | default "mysql-database" }}
+              {{- else }}
               value: "{{ include "porigins-server-cpp.mysqlDatabase" . }}"
+              {{- end }}
             - name: MYSQL_USER
+              {{- if .Values.externalDatabase.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: {{ .Values.externalDatabase.usernameKey | default "mysql-user" }}
+              {{- else }}
               value: "{{ include "porigins-server-cpp.mysqlUser" . }}"
+              {{- end }}
           volumeMounts:
             - name: config
               mountPath: /app/config.lua

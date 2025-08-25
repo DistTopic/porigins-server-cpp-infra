@@ -12,6 +12,24 @@ porigins-server-cpp:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
       service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+  
+  # Ingress configuration for Traefik
+  ingress:
+    enabled: true
+    className: "traefik"
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+      traefik.ingress.kubernetes.io/router.tls: "true"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: game.porigins.org
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: game-porigins-org-tls
+        hosts:
+          - game.porigins.org
     
   server:
     worldName: "gold"
@@ -47,18 +65,24 @@ porigins-server-cpp:
     storageClass: "gp3"
     
   mysql:
+    enabled: false  # Using external database
+    
+  # External database configuration using existing cluster secrets
+  externalDatabase:
     enabled: true
-    auth:
-      # Production passwords should be set via sealed secrets or external secrets
-      rootPassword: "CHANGE_ME_IN_SEALED_SECRETS"
-      password: "CHANGE_ME_IN_SEALED_SECRETS"
-    primary:
-      persistence:
-        enabled: true
-        size: 100Gi
-        storageClass: "gp3"
-    metrics:
-      enabled: true
+    # Use existing secret from cluster database namespace
+    existingSecret: "mysql-secret"
+    existingSecretNamespace: "database"
+    hostKey: "mysql-host"
+    portKey: "mysql-port"
+    databaseKey: "mysql-database"
+    usernameKey: "mysql-user"
+    passwordKey: "mysql-password"
+    
+    # Direct connection values (non-sensitive)
+    host: "mysql.database.svc.cluster.local"
+    port: 3306
+    database: "porigins-database"
       
   # Production-specific node selection
   nodeSelector:

@@ -41,10 +41,19 @@ porigins-server-cpp:
     size: 5Gi
     
   mysql:
-    enabled: true
+    # For dev, can use either embedded MySQL or external
+    enabled: true  # Set to false to use external database
     auth:
       rootPassword: "dev-password"
       password: "dev-password"
     primary:
       persistence:
         size: 10Gi
+        
+  # External database configuration (when mysql.enabled is false)
+  externalDatabase:
+    host: "EXTERNAL_DB_HOST"  # Replace with actual database host
+    port: 3306
+    database: "porigins_server_dev"  # Replace with actual database name
+    username: "porigins_dev_user"    # Replace with actual username
+    password: "EXTERNAL_DB_PASSWORD" # Should be set via sealed secrets
